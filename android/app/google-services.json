@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "368966349706",
+    "project_id": "nexaurquidijosue",
+    "storage_bucket": "nexaurquidijosue.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:368966349706:android:0a0653e8ba1a6c2e464e73",
+        "android_client_info": {
+          "package_name": "com.example.examenmovilsw1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbMDTiFjg6k1w7LAsW__qAP4yCW4i-sBU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

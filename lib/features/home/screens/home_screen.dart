@@ -4,6 +4,7 @@ import '../../projects/models/project_models.dart';
 import '../../projects/services/project_service.dart';
 import '../../invitations/models/invitation_models.dart';
 import '../../invitations/services/invitation_service.dart';
+import '../../auth/services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,6 +16,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final projectService = ProjectService();
   final invitationService = InvitationService();
+  final authService = AuthService();
 
   bool loading = true;
   String errorMessage = '';
@@ -74,6 +76,18 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: 'Cerrar sesión',
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: () async {
+              await authService.logout();
+
+              if (!context.mounted) return;
+              context.go('/login');
+            },
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: loadHome,
