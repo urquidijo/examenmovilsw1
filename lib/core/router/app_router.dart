@@ -5,22 +5,17 @@ import '../../features/home/screens/home_screen.dart';
 import '../../features/projects/screens/project_detail_screen.dart';
 import '../../features/tasks/screens/project_task_departments_screen.dart';
 import '../../features/tasks/screens/department_tasks_screen.dart';
+import '../../features/tasks/screens/task_detail_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/login',
   routes: [
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(
       path: '/register',
       builder: (context, state) => const RegisterScreen(),
     ),
-    GoRoute(
-      path: '/home',
-      builder: (context, state) => const HomeScreen(),
-    ),
+    GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     GoRoute(
       path: '/projects/:projectId',
       builder: (context, state) {
@@ -43,6 +38,15 @@ final appRouter = GoRouter(
           projectId: projectId,
           projectName: projectName,
         );
+      },
+    ),
+    GoRoute(
+      path: '/projects/:projectId/tasks/:taskId',
+      builder: (context, state) {
+        final projectId = state.pathParameters['projectId'] ?? '';
+        final taskId = state.pathParameters['taskId'] ?? '';
+
+        return TaskDetailScreen(projectId: projectId, taskId: taskId);
       },
     ),
     GoRoute(
