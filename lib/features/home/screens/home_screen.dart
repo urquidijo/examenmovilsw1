@@ -64,7 +64,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mis proyectos'), centerTitle: true),
+      backgroundColor: const Color(0xFFF1F5F9),
+      appBar: AppBar(
+        title: const Text(
+          'NexaFlow',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        centerTitle: false,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+      ),
       body: RefreshIndicator(
         onRefresh: loadHome,
         child: loading
@@ -73,7 +83,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ? ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
-                  Text(errorMessage),
+                  _emptyBox(
+                    icon: Icons.error_outline,
+                    title: 'No se pudo cargar',
+                    text: errorMessage,
+                  ),
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: loadHome,
@@ -82,31 +96,58 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               )
             : ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(18),
                 children: [
-                  if (invitations.isNotEmpty) ...[
-                    const Text(
-                      'Invitaciones pendientes',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0F172A), Color(0xFF0369A1)],
                       ),
+                      borderRadius: BorderRadius.circular(28),
                     ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.account_tree_rounded,
+                          color: Colors.white,
+                          size: 38,
+                        ),
+                        SizedBox(height: 14),
+                        Text(
+                          'Mis proyectos',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Consulta tus proyectos, invitaciones y tareas asignadas.',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  if (invitations.isNotEmpty) ...[
+                    _sectionTitle('Invitaciones pendientes'),
                     const SizedBox(height: 12),
                     ...invitations.map(_buildInvitationCard),
                     const SizedBox(height: 24),
                   ],
-                  const Text(
-                    'Proyectos',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
+
+                  _sectionTitle('Proyectos'),
                   const SizedBox(height: 12),
+
                   if (projects.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Text('Aún no tienes proyectos asignados'),
-                      ),
+                    _emptyBox(
+                      icon: Icons.folder_open,
+                      title: 'Sin proyectos',
+                      text: 'Aún no tienes proyectos asignados.',
                     )
                   else
                     ...projects.map(_buildProjectCard),
@@ -116,18 +157,82 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+        color: Color(0xFF0F172A),
+      ),
+    );
+  }
+
+  Widget _emptyBox({
+    required IconData icon,
+    required String title,
+    required String text,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 42, color: const Color(0xFF64748B)),
+          const SizedBox(height: 10),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(text, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
   Widget _buildProjectCard(ProjectSummary project) {
-    return Card(
-      elevation: 0,
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x11000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
       child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.account_tree_outlined)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 10,
+        ),
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE0F2FE),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Icon(
+            Icons.business_center_outlined,
+            color: Color(0xFF0369A1),
+          ),
+        ),
         title: Text(
           project.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.w800),
         ),
-        subtitle: Text(project.description ?? 'Sin descripción'),
-        trailing: const Icon(Icons.chevron_right),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(project.description ?? 'Sin descripción'),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded),
         onTap: () {
           if (project.id.isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -143,40 +248,56 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildInvitationCard(ProjectInvitation invitation) {
-    return Card(
-      elevation: 0,
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              invitation.projectName,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text('Rol: ${invitation.role ?? 'Miembro'}'),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => rejectInvitation(invitation.id),
-                    child: const Text('Rechazar'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFBAE6FD)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.notifications_active_outlined,
+                color: Color(0xFF0284C7),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  invitation.projectName,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => acceptInvitation(invitation.id),
-                    child: const Text('Aceptar'),
-                  ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('Rol: ${invitation.role ?? 'Miembro'}'),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => rejectInvitation(invitation.id),
+                  child: const Text('Rechazar'),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => acceptInvitation(invitation.id),
+                  child: const Text('Aceptar'),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -113,9 +113,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
     if (isDecisionTask &&
         (selectedDecisionResult == null || selectedDecisionResult!.isEmpty)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Selecciona una decisión')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona una decisión')),
+      );
       return false;
     }
 
@@ -173,6 +173,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       );
 
       context.pop();
+    } on DioException catch (error) {
+      final data = error.response?.data;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            data?['message']?.toString() ??
+                data?['error']?.toString() ??
+                'No se pudo completar la tarea',
+          ),
+        ),
+      );
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudo completar la tarea')),
@@ -188,248 +200,272 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final ticket = currentTask?.ticket;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Detalle de tarea')),
+      backgroundColor: const Color(0xFFF1F5F9),
+      appBar: AppBar(
+        title: const Text(
+          'Detalle de tarea',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+      ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : errorMessage.isNotEmpty && currentTask == null
-          ? Center(child: Text(errorMessage))
-          : currentTask == null
-          ? const Center(child: Text('Tarea no encontrada'))
-          : RefreshIndicator(
-              onRefresh: loadTask,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _buildTaskHeader(currentTask),
-                  const SizedBox(height: 16),
-                  if (ticket != null) _buildTicketCard(ticket),
-                  if (ticket?.metadata != null &&
-                      ticket!.metadata!.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _buildMetadataCard(ticket.metadata!),
-                  ],
-                  if (isDecisionTask) ...[
-                    const SizedBox(height: 16),
-                    _buildDecisionCard(currentTask),
-                  ],
-                  if (currentTask.requiresTramite) ...[
-                    const SizedBox(height: 16),
-                    buildDynamicForm(),
-                  ],
-                  if (errorMessage.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      errorMessage,
-                      style: const TextStyle(color: Colors.red),
+              ? Center(child: Text(errorMessage))
+              : currentTask == null
+                  ? const Center(child: Text('Tarea no encontrada'))
+                  : RefreshIndicator(
+                      onRefresh: loadTask,
+                      child: ListView(
+                        padding: const EdgeInsets.all(18),
+                        children: [
+                          _buildTaskHeader(currentTask),
+                          const SizedBox(height: 16),
+                          if (ticket != null) _buildTicketCard(ticket),
+                          if (ticket?.metadata != null &&
+                              ticket!.metadata!.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            _buildMetadataCard(ticket.metadata!),
+                          ],
+                          if (isDecisionTask) ...[
+                            const SizedBox(height: 16),
+                            _buildDecisionCard(currentTask),
+                          ],
+                          if (currentTask.requiresTramite) ...[
+                            const SizedBox(height: 16),
+                            buildDynamicForm(),
+                          ],
+                          if (errorMessage.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              errorMessage,
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ],
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 52,
+                            child: FilledButton.icon(
+                              onPressed: completing || loadingTramite
+                                  ? null
+                                  : completeTask,
+                              icon: completing
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.check_circle_outline),
+                              label: Text(
+                                completing
+                                    ? 'Completando...'
+                                    : 'Completar tarea',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 50,
-                    child: FilledButton(
-                      onPressed: completing || loadingTramite
-                          ? null
-                          : completeTask,
-                      child: completing
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Completar tarea'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
     );
   }
 
   Widget _buildTaskHeader(WorkflowTask task) {
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Tarea asignada',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              task.nodeLabel,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Revisa la información del ticket asociado y completa la acción requerida para continuar el flujo.',
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Chip(label: Text(getTaskStatusLabel(task.status))),
-                Chip(label: Text(task.departmentName ?? 'Sin departamento')),
-                if (task.requiresTramite)
-                  const Chip(label: Text('Requiere trámite')),
-              ],
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F172A), Color(0xFF0369A1)],
         ),
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.task_alt_rounded, color: Colors.white, size: 38),
+          const SizedBox(height: 14),
+          const Text(
+            'Tarea asignada',
+            style: TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            task.nodeLabel,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Revisa la información del ticket asociado y completa la acción requerida para continuar el flujo.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _softChip(getTaskStatusLabel(task.status)),
+              _softChip(task.departmentName ?? 'Sin departamento'),
+              if (task.requiresTramite) _softChip('Requiere trámite'),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildTicketCard(TaskTicketInfo ticket) {
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Detalles del ticket',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _InfoItem('Título', ticket.title),
-            _InfoItem('Estado', ticket.status),
-            _InfoItem('Descripción', ticket.description ?? 'Sin descripción'),
-            _InfoItem('Cliente', ticket.clientName ?? 'No especificado'),
-            _InfoItem('Teléfono', ticket.clientPhone ?? 'No especificado'),
-            _InfoItem('Correo', ticket.clientEmail ?? 'No especificado'),
-            _InfoItem(
-              'Referencia',
-              ticket.clientReference ?? 'No especificada',
-            ),
-          ],
-        ),
-      ),
+    return _sectionCard(
+      title: 'Detalles del ticket',
+      icon: Icons.confirmation_number_outlined,
+      children: [
+        _InfoItem('Título', ticket.title),
+        _InfoItem('Estado', ticket.status),
+        _InfoItem('Descripción', ticket.description ?? 'Sin descripción'),
+        _InfoItem('Cliente', ticket.clientName ?? 'No especificado'),
+        _InfoItem('Teléfono', ticket.clientPhone ?? 'No especificado'),
+        _InfoItem('Correo', ticket.clientEmail ?? 'No especificado'),
+        _InfoItem('Referencia', ticket.clientReference ?? 'No especificada'),
+      ],
     );
   }
 
   Widget _buildMetadataCard(Map<String, dynamic> metadata) {
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Metadata adicional',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            ...metadata.entries.map(
-              (entry) => _InfoItem(entry.key, entry.value.toString()),
-            ),
-          ],
-        ),
-      ),
+    return _sectionCard(
+      title: 'Metadata adicional',
+      icon: Icons.data_object_rounded,
+      children: metadata.entries
+          .map((entry) => _InfoItem(entry.key, entry.value.toString()))
+          .toList(),
     );
   }
 
   Widget _buildDecisionCard(WorkflowTask task) {
     final options = task.decisionOptions;
 
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Decisión',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    return _sectionCard(
+      title: 'Decisión',
+      icon: Icons.alt_route_rounded,
+      children: [
+        if (task.decisionQuestion != null)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
             ),
-            if (task.decisionQuestion != null) ...[
-              const SizedBox(height: 8),
-              Text(task.decisionQuestion!),
-            ],
-            const SizedBox(height: 12),
-            if (options != null && options.isNotEmpty)
-              ...options.map(
-                (option) => RadioListTile<String>(
-                  value: option.value,
-                  groupValue: selectedDecisionResult,
-                  title: Text(
-                    option.label.isNotEmpty ? option.label : option.value,
-                  ),
-                  subtitle: Text('Valor: ${option.value}'),
-                  onChanged: (value) {
-                    setState(() => selectedDecisionResult = value);
-                  },
-                ),
-              )
-            else
-              TextField(
-                onChanged: (value) {
-                  selectedDecisionResult = value;
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Resultado de decisión',
-                  border: OutlineInputBorder(),
+            child: Text(task.decisionQuestion!),
+          ),
+        if (options.isNotEmpty)
+          ...options.map(
+            (option) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: selectedDecisionResult == option.value
+                    ? const Color(0xFFE0F2FE)
+                    : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: selectedDecisionResult == option.value
+                      ? const Color(0xFF0284C7)
+                      : const Color(0xFFE2E8F0),
                 ),
               ),
-          ],
-        ),
-      ),
+              child: RadioListTile<String>(
+                value: option.value,
+                groupValue: selectedDecisionResult,
+                title: Text(
+                  option.label.isNotEmpty ? option.label : option.value,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text('Valor: ${option.value}'),
+                onChanged: (value) {
+                  setState(() => selectedDecisionResult = value);
+                },
+              ),
+            ),
+          )
+        else
+          TextField(
+            onChanged: (value) {
+              selectedDecisionResult = value;
+            },
+            decoration: _inputDecoration('Resultado de decisión'),
+          ),
+      ],
     );
   }
 
   Widget buildDynamicForm() {
     if (loadingTramite) {
-      return const Card(
-        elevation: 0,
-        child: Padding(
-          padding: EdgeInsets.all(18),
-          child: Text('Cargando formulario del trámite...'),
-        ),
+      return _sectionCard(
+        title: 'Formulario del trámite',
+        icon: Icons.dynamic_form_rounded,
+        children: const [
+          Padding(
+            padding: EdgeInsets.all(8),
+            child: Text('Cargando formulario del trámite...'),
+          ),
+        ],
       );
     }
 
     final template = tramiteTemplate;
 
     if (template == null) {
-      return const Card(
-        elevation: 0,
-        child: Padding(
-          padding: EdgeInsets.all(18),
-          child: Text('No se encontró el formulario del trámite'),
-        ),
+      return _sectionCard(
+        title: 'Formulario del trámite',
+        icon: Icons.dynamic_form_rounded,
+        children: const [
+          Padding(
+            padding: EdgeInsets.all(8),
+            child: Text('No se encontró el formulario del trámite'),
+          ),
+        ],
       );
     }
 
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Formulario del trámite',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              template.name,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            if (template.description != null &&
-                template.description!.isNotEmpty)
-              Text(template.description!),
-            const SizedBox(height: 18),
-            ...template.fields.map(buildField),
-          ],
+    return _sectionCard(
+      title: 'Formulario del trámite',
+      icon: Icons.dynamic_form_rounded,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                template.name,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              if (template.description != null &&
+                  template.description!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(template.description!),
+              ],
+            ],
+          ),
         ),
-      ),
+        ...template.fields.map(buildField),
+      ],
     );
   }
 
@@ -464,10 +500,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       child: TextField(
         maxLines: maxLines,
         keyboardType: keyboardType,
-        decoration: InputDecoration(
-          labelText: field.required ? '${field.label} *' : field.label,
-          hintText: field.placeholder,
-          border: const OutlineInputBorder(),
+        decoration: _inputDecoration(
+          field.required ? '${field.label} *' : field.label,
+          hint: field.placeholder,
         ),
         onChanged: (value) {
           tramiteData[field.id] = value;
@@ -482,6 +517,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
         onPressed: () async {
           final date = await showDatePicker(
             context: context,
@@ -511,9 +552,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: DropdownButtonFormField<String>(
-        decoration: InputDecoration(
-          labelText: field.required ? '${field.label} *' : field.label,
-          border: const OutlineInputBorder(),
+        decoration: _inputDecoration(
+          field.required ? '${field.label} *' : field.label,
         ),
         items: field.options
             .map(
@@ -530,8 +570,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget _checkboxField(TramiteField field) {
     final value = tramiteData[field.id] == true;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: CheckboxListTile(
         value: value,
         title: Text(field.required ? '${field.label} *' : field.label),
@@ -550,39 +594,118 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              field.required ? '${field.label} *' : field.label,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final result = await FilePicker.pickFiles(
+                  allowMultiple: false,
+                  type: FileType.any,
+                );
+
+                if (result != null && result.files.isNotEmpty) {
+                  setState(() {
+                    selectedFiles[field.id] = result.files.first;
+                  });
+                }
+              },
+              icon: const Icon(Icons.attach_file),
+              label: Text(file == null ? 'Seleccionar archivo' : file.name),
+            ),
+            if (file != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  '${(file.size / 1024).toStringAsFixed(0)} KB',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x11000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            field.required ? '${field.label} *' : field.label,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () async {
-              final result = await FilePicker.pickFiles(
-                allowMultiple: false,
-                type: FileType.any,
-              );
-
-              if (result != null && result.files.isNotEmpty) {
-                setState(() {
-                  selectedFiles[field.id] = result.files.first;
-                });
-              }
-            },
-            icon: const Icon(Icons.attach_file),
-            label: Text(file == null ? 'Seleccionar archivo' : file.name),
-          ),
-          if (file != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                '${(file.size / 1024).toStringAsFixed(0)} KB',
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+          Row(
+            children: [
+              Icon(icon, color: const Color(0xFF0369A1)),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
         ],
+      ),
+    );
+  }
+
+  Widget _softChip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Text(text, style: const TextStyle(color: Colors.white)),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, {String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
       ),
     );
   }
